@@ -13,28 +13,7 @@ def make_dir_if_not_exists(path, *paths):
     if not os.path.exists(joined):
         os.mkdir(joined)
 
-URL_TEMPLATE = 'https://gridgain.freshdesk.com/api/v2/tickets/{ticket}/conversations'
-HEADERS = { 'Content-Type': 'application/json' }
-ATTACHMENTS_DIR='attachments'
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-k", "--apikey", dest="api_key", 
-                    help="Freshdesk API key (see Profile settings)")
-parser.add_argument("-t", "--ticket", dest="ticket", 
-                    help="Ticket number")
-
-args = parser.parse_args()
-
-api_key = args.api_key
-ticket = args.ticket
-
-url = URL_TEMPLATE.format(ticket=ticket)
-r = requests.get(url, headers=HEADERS, auth=(api_key, 'X'))
-r.raise_for_status()
-
-make_dir_if_not_exists(ATTACHMENTS_DIR)
-
-for post in r.json():
+def process_post(post):
     created_at = post['created_at'].replace('T', '_').replace(':', '.')
     post_path = os.path.join(ATTACHMENTS_DIR, created_at)
     for attachment in post['attachments']:
@@ -58,4 +37,34 @@ for post in r.json():
             attachment_dir_path = os.path.join(post_path, attachment_dir_name)
             with tarfile.open(attachment_path, 'r') as tar_ref:
                 tar_ref.extractall(attachment_dir_path)
-                
+
+TICKET_URL_TEMPLATE = 'https://gridgain.freshdesk.com/api/v2/tickets/{ticket}'
+CONVERSATIONS_URL_TEMPLATE = 'https://gridgain.freshdesk.com/api/v2/tickets/{ticket}/conversations'
+HEADERS = { 'Content-Type': 'application/json' }
+ATTACHMENTS_DIR = 'attachments'
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-k", "--apikey", dest="api_key", 
+                    help="Freshdesk API key (see Profile settings)")
+parser.add_argument("-t", "--ticket", dest="ticket", 
+                    help="Ticket number")
+
+args = parser.parse_args()
+
+api_key = args.api_key
+ticket = args.ticket
+
+make_dir_if_not_exists(ATTACHMENTS_DIR)
+
+url = TICKET_URL_TEMPLATE.format(ticket=ticket)
+r = requests.get(url, headers=HEADERS, auth=(api_key, 'X'))
+r.raise_for_status()
+
+process_post(r.json())
+
+url = CONVERSATIONS_URL_TEMPLATE.format(ticket=ticket)
+r = requests.get(url, headers=HEADERS, auth=(api_key, 'X'))
+r.raise_for_status()
+
+for post in r.json():
+    process_post(post)
