@@ -4,6 +4,7 @@ import os
 import argparse
 import zipfile
 import tarfile
+import urllib.parse
 
 TICKET_URL_TEMPLATE = 'https://gridgain.freshdesk.com/api/v2/tickets/{ticket}'
 CONVERSATIONS_URL_TEMPLATE = 'https://gridgain.freshdesk.com/api/v2/tickets/{ticket}/conversations?page={page}'
@@ -29,7 +30,9 @@ def process_post(post):
 
         if not os.path.isfile(attachment_path):
             attachment_url = attachment['attachment_url']
-            wget.download(attachment_url, out=attachment_path)
+            # have to unquote because wget will quote again, and this is not reentrable due to handling of the %
+            unquoted_url = urllib.parse.unquote(attachment_url)
+            wget.download(unquoted_url, out=attachment_path)
         
         if zipfile.is_zipfile(attachment_path):
             attachment_dir_name = attachment_name.split('.')[0]
