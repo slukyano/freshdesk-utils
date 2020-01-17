@@ -6,8 +6,8 @@ import zipfile
 import tarfile
 import urllib.parse
 
-TICKET_URL_TEMPLATE = 'https://gridgain.freshdesk.com/api/v2/tickets/{ticket}'
-CONVERSATIONS_URL_TEMPLATE = 'https://gridgain.freshdesk.com/api/v2/tickets/{ticket}/conversations?page={page}'
+TICKET_URL_TEMPLATE = 'https://{domain}.freshdesk.com/api/v2/tickets/{ticket}'
+CONVERSATIONS_URL_TEMPLATE = 'https://{domain}.freshdesk.com/api/v2/tickets/{ticket}/conversations?page={page}'
 HEADERS = { 'Content-Type': 'application/json' }
 ATTACHMENTS_DIR = 'attachments'
 
@@ -47,6 +47,8 @@ def process_post(post):
                 tar_ref.extractall(attachment_dir_path)
 
 parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--domain", dest="domain", 
+                    help="Freshdesk company domain (domain.freshdesk.com)")
 parser.add_argument("-k", "--apikey", dest="api_key", 
                     help="Freshdesk API key (see Profile settings)")
 parser.add_argument("-t", "--ticket", dest="ticket", 
@@ -56,10 +58,11 @@ args = parser.parse_args()
 
 api_key = args.api_key
 ticket = args.ticket
+domain = args.domain
 
 make_dir_if_not_exists(ATTACHMENTS_DIR)
 
-url = TICKET_URL_TEMPLATE.format(ticket=ticket)
+url = TICKET_URL_TEMPLATE.format(ticket=ticket, domain=domain)
 r = requests.get(url, headers=HEADERS, auth=(api_key, 'X'))
 r.raise_for_status()
 
@@ -67,7 +70,7 @@ process_post(r.json())
 
 page = 1
 while True:
-    url = CONVERSATIONS_URL_TEMPLATE.format(ticket=ticket, page=page)
+    url = CONVERSATIONS_URL_TEMPLATE.format(ticket=ticket, domain=domain, page=page)
     r = requests.get(url, headers=HEADERS, auth=(api_key, 'X'))
     r.raise_for_status()
     i = 0
