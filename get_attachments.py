@@ -44,7 +44,26 @@ def process_post(post):
             attachment_dir_name = attachment_name.split('.')[0]
             attachment_dir_path = os.path.join(post_path, attachment_dir_name)
             with tarfile.open(attachment_path, 'r') as tar_ref:
-                tar_ref.extractall(attachment_dir_path)
+                def is_within_directory(directory, target):
+                    
+                    abs_directory = os.path.abspath(directory)
+                    abs_target = os.path.abspath(target)
+                
+                    prefix = os.path.commonprefix([abs_directory, abs_target])
+                    
+                    return prefix == abs_directory
+                
+                def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+                
+                    for member in tar.getmembers():
+                        member_path = os.path.join(path, member.name)
+                        if not is_within_directory(path, member_path):
+                            raise Exception("Attempted Path Traversal in Tar File")
+                
+                    tar.extractall(path, members, numeric_owner) 
+                    
+                
+                safe_extract(tar_ref, attachment_dir_path)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--domain", dest="domain", 
